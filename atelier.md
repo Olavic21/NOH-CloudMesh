@@ -40,7 +40,7 @@ Pour chaque décision : la proposition est déjà écrite, il faut la valider, l
 | A. Préfixe de longueur 4 octets (proposition) | Simple, robuste, indépendant du contenu | Il faut lire les octets avec précision |
 | B. Délimiteur de fin (par exemple saut de ligne) | Lisible à la main avec Netcat | Interdit les sauts de ligne dans le JSON, fragile |
 
-**Décision finale :** ___________________________
+**Décision finale :** On va aller avec l'option B
 
 ### Décision 2 : taille maximale d'une trame
 
@@ -48,13 +48,13 @@ Pour chaque décision : la proposition est déjà écrite, il faut la valider, l
 
 **Question à Abdourahim :** a-t-il besoin de transmettre des données plus volumineuses, comme des images ? Si oui, cette limite doit être revue.
 
-**Décision finale :** ___________________________
+**Décision finale :** On va partir sur la base de 1 Mo max 
 
 ### Décision 3 : encodage et racine du message
 
 **Proposition :** UTF-8 uniquement. La racine de chaque message est un **objet** JSON, jamais un tableau ni une valeur simple.
 
-**Décision finale :** ___________________________
+**Décision finale :** Oui UTF-8 sera considéré comme système d'encodage
 
 ### Décision 4 : structure d'une requête
 
@@ -78,7 +78,7 @@ Pour chaque décision : la proposition est déjà écrite, il faut la valider, l
 - Le `id` est-il unique par connexion, ou par utilisateur ? *(Proposition : par connexion.)*
 - Faut-il une convention de nommage pour les types, comme `domaine.action` ? *(Proposition : oui.)*
 
-**Décision finale :** ___________________________
+**Décision finale :** Le id sera unique par connexion et oui une convention de nommage est préférable
 
 ### Décision 5 : structure d'une réponse
 
@@ -96,7 +96,7 @@ Succès :
 
 **Règle de sécurité :** le champ `message` est destiné à l'utilisateur. Il ne contient jamais de détail interne (requête SQL, nom de table, trace d'exception).
 
-**Décision finale :** ___________________________
+**Décision finale :** Exactement
 
 ---
 
@@ -106,11 +106,11 @@ Succès :
 
 | # | Question | Proposition | Décision finale |
 |---|---|---|---|
-| Q1 | Requête sans `id` : que répond le serveur ? | Réponse d'erreur `BAD_REQUEST`, sans `id` | ________ |
-| Q2 | JSON invalide : fermer la connexion ou seulement rejeter la requête ? | Rejeter la requête, garder la connexion | ________ |
-| Q3 | Délai d'attente d'une réponse côté client | 10 secondes, à confirmer avec Abdourahim | ________ |
-| Q4 | Plusieurs requêtes envoyées sans attendre les réponses ? | Autorisé : la corrélation se fait par `id` | ________ |
-| Q5 | Le serveur envoie-t-il des messages sans requête (notifications) ? | Non pour le prototype | ________ |
+| Q1 | Requête sans `id` : que répond le serveur ? | Réponse d'erreur `BAD_REQUEST`, sans `id` | code 501 (identifiant absent) |
+| Q2 | JSON invalide : fermer la connexion ou seulement rejeter la requête ? | Rejeter la requête, garder la connexion | rejeter la requête, garder la connexion|
+| Q3 | Délai d'attente d'une réponse côté client | 10 secondes, à confirmer avec Abdourahim | On va aller avec 15 secondes |
+| Q4 | Plusieurs requêtes envoyées sans attendre les réponses ? | Autorisé : la corrélation se fait par `id` | Okay, la corrélation va se faire par id |
+| Q5 | Le serveur envoie-t-il des messages sans requête (notifications) ? | Non pour le prototype | Okay mais il faudra ajouter cette fonctionnalité pour faciliter les mises à jour |
 
 ---
 
@@ -173,9 +173,9 @@ Liste de départ, à valider.
 | Types de messages (section 5) | | |
 | Codes d'erreur (section 6) | | |
 
-**Date de validation :** ___________________________
+**Date de validation :** 06/11/2026
 
-**Personne chargée de mettre à jour `docs/protocole.md` :** ___________________________
+**Personne chargée de mettre à jour `docs/protocole.md` :** Abdosrad07
 
 ---
 
