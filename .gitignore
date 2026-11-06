@@ -1,0 +1,75 @@
+# ==========================================================
+# N.O.H. CloudMesh — .gitignore (racine du dépôt)
+# ==========================================================
+
+# --- Dart / Flutter : fichiers générés ---
+.dart_tool/
+.packages
+build/
+*.g.dart
+*.freezed.dart
+coverage/
+
+# Fichiers de compilation Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Dépendances locales (Flutter/Dart)
+# pubspec.lock est volontairement versionné : il fige les versions pour toute l'équipe.
+
+# --- Secrets et configuration locale (R7 du guide Git) ---
+.env
+.env.*
+*.env
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+credentials.*
+
+# --- Base de données locale ---
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+
+# --- Journaux ---
+*.log
+logs/
+
+# --- Android ---
+client/android/.gradle/
+client/android/local.properties
+client/android/app/debug/
+client/android/app/profile/
+client/android/app/release/
+client/android/key.properties
+*.jks
+*.keystore
+
+# --- Windows (build Flutter desktop) ---
+client/windows/flutter/ephemeral/
+
+# --- IDE et éditeurs ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# --- Système d'exploitation ---
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.tmp
+
+# --- Fichiers de cache et temporaires ---
+.cache/
+*.bak
