@@ -1,0 +1,99 @@
+'use strict';
+/* N.O.H. CloudMesh – maquettes interactives (données fictives, aucun serveur) */
+const $=s=>document.querySelector(s),ic=n=>`<i data-lucide="${n}"></i>`;
+const icons=()=>window.lucide&&lucide.createIcons();
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const now=()=>'17 nov · '+new Date().toTimeString().slice(0,5);
+const ST={ok:['Validée','green'],pending:['En attente','orange'],info:['Pièces demandées','orange'],ko:['Rejetée','red']};
+const ROLES={student:'Étudiant',agent:'Agent',admin:'Administrateur'};
+const USER={student:'Aïcha Mballa',agent:'M. Tchoua',admin:'Administration'};
+const MAIL={student:'aicha.mballa@univ-demo.cm',agent:'m.tchoua@univ-demo.cm',admin:'admin@univ-demo.cm'};
+const NAV={
+ student:[['dash','house','Accueil'],['new','file-plus','Nouvelle'],['mine','files','Demandes'],['hist','history','Historique'],['notifs','bell','Alertes'],['profile','user','Profil']],
+ agent:[['dash','layout-dashboard','Accueil'],['queue','inbox','À traiter'],['hist','history','Traités']],
+ admin:[['dash','layout-dashboard','Accueil'],['users','users','Étudiants'],['agents','user-cog','Agents'],['services','building-2','Services'],['sup','eye','Supervision']]};
+const TT={dash:'Tableau de bord',new:'Nouvelle demande',mine:'Mes demandes',notifs:'Notifications',profile:'Profil et paramètres',queue:'Demandes à traiter',users:'Gestion des utilisateurs',agents:'Gestion des agents',services:'Gestion des services',sup:'Supervision des demandes',detail:'Détails de la demande'};
+const title=()=>S.view==='hist'?(S.role==='agent'?'Historique des traitements':'Historique'):TT[S.view];
+const TYPES=[['Relevé de notes','file-text','Scolarité'],['Attestation de scolarité','award','Scolarité'],['Certificat de réussite','badge-check','Scolarité'],['Réclamation de note','message-square-warning','Examens'],['Changement de filière','shuffle','Scolarité']];
+const ico=t=>(TYPES.find(x=>x[0]===t)||[0,'file-text'])[1];
+const E=(t,ti,n,c)=>[t,ti,n,c||'blue'];
+const Q=(id,type,stu,date,s,msg,files,ev)=>({id,type,stu,date,s,msg,files,ev,svc:TYPES.find(x=>x[0]===type)[2]});
+const ME='Aïcha Mballa';
+let R=[
+ Q('DEM-044','Attestation de scolarité','Jean Kamga','16 nov','pending','Attestation pour une demande de visa.',['cni.pdf','inscription.pdf'],[E('16 nov · 08:40','Demande soumise','2 pièces jointes reçues.')]),
+ Q('DEM-043','Relevé de notes','Sandrine Ebogo','15 nov','pending','Relevé du semestre 4 pour un dossier de bourse extérieure.',['cni.pdf'],[E('15 nov · 15:20','Demande soumise','1 pièce jointe reçue.')]),
+ Q('DEM-041','Relevé de notes',ME,'12 nov','pending','Relevé du semestre 5 pour un dossier de stage.',['cni.pdf'],[E('12 nov · 09:14','Demande soumise','Vous avez envoyé la demande avec 1 pièce.'),E('12 nov · 11:02','Prise en charge','Dossier assigné à M. Tchoua (Scolarité).')]),
+ Q('DEM-040','Changement de filière','Paul Nkeng','11 nov','ok','Passage de Génie civil à Télécoms.',['releve-s2.pdf'],[E('11 nov · 10:00','Demande soumise','Dossier reçu.'),E('12 nov · 14:30','Demande validée','Changement accepté par la scolarité.','green')]),
+ Q('DEM-038','Attestation de scolarité',ME,'9 nov','ok','Attestation pour ma mutuelle étudiante.',['cni.pdf'],[E('9 nov · 08:05','Demande soumise','1 pièce jointe envoyée.'),E('10 nov · 16:45','Demande validée','Attestation disponible au guichet de la scolarité.','green')]),
+ Q('DEM-036','Réclamation de note','Linda Fotso','8 nov','info','Note de réseaux informatiques contestée.',['copie.pdf'],[E('8 nov · 12:10','Demande soumise','Copie scannée jointe.'),E('9 nov · 09:00','Pièces demandées','Joindre le sujet de l’examen.','orange')]),
+ Q('DEM-033','Réclamation de note',ME,'4 nov','ko','Réclamation sur la note de mathématiques.',['copie.pdf'],[E('4 nov · 13:00','Demande soumise','Copie jointe.'),E('6 nov · 10:15','Demande rejetée','Demande hors délai : la période de réclamation était close.','red')]),
+ Q('DEM-029','Certificat de réussite',ME,'28 oct','info','Certificat de réussite de la licence 2.',['cni.pdf'],[E('28 oct · 09:30','Demande soumise','1 pièce jointe envoyée.'),E('30 oct · 11:20','Pièces demandées','Merci de joindre une copie du diplôme du BAC.','orange')])
+];
+let N=[{t:'Demande DEM-029 : pièces demandées',d:'Il y a 2 jours',r:0,i:'paperclip',go:'DEM-029'},{t:'Demande DEM-038 validée',d:'Il y a 7 jours',r:0,i:'circle-check',go:'DEM-038'},{t:'Demande DEM-033 rejetée',d:'Il y a 11 jours',r:1,i:'circle-x',go:'DEM-033'}];
+let U=[['Aïcha Mballa','GI3'],['Jean Kamga','GI2'],['Sandrine Ebogo','Télécoms 3'],['Paul Nkeng','Télécoms 1'],['Linda Fotso','GI3'],['Brice Onana','GC2']].map(([n,f],i)=>({n,f,m:n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(' ','.')+'@univ-demo.cm',on:i!==5}));
+let A=[{n:'M. Tchoua',s:'Scolarité',on:1},{n:'Mme Ngono',s:'Examens',on:1},{n:'M. Essomba',s:'Scolarité',on:0}];
+let SV=[{n:'Scolarité',on:1},{n:'Examens',on:1},{n:'Secrétariat général',on:0}];
+let ND={t:null,m:'',f:[]};
+let S={role:'student',dev:innerWidth>800?'desktop':'mobile',auth:false,view:'dash',id:null,prev:'mine',q:'',f:''};
+const cnt=(s,l=R)=>l.filter(r=>r.s===s).length,unread=()=>N.filter(n=>!n.r).length,cur=()=>R.find(r=>r.id===S.id);
+const bd=s=>`<span class="b ${ST[s][1]}">${ST[s][0]}</span>`;
+const st=(l,v,c,i)=>`<div class="card stat ${c}">${ic(i)}<b>${v}</b><small>${l}</small></div>`;
+const row=(r,s)=>`<div class="row" onclick="openR('${r.id}')"><span class="ico">${ic(ico(r.type))}</span><div class="g"><b>${r.type}</b><small>${r.id}${s?' – '+r.stu:''} – ${r.date}</small></div>${bd(r.s)}</div>`;
+const tl=ev=>`<div class="tl">${[...ev].reverse().map((e,i)=>`<div class="ev ${e[3]} ${i?'':'open'}" onclick="this.classList.toggle('open')"><b>${e[1]}</b><small>${e[0]}</small><p class="n">${e[2]}</p></div>`).join('')}</div>`;
+const pool=()=>R.filter(r=>S.role==='student'?r.stu===ME:S.view==='queue'?r.s==='pending':S.view==='hist'&&S.role==='agent'?r.s!=='pending':true);
+const rows=()=>{const q=S.q.toLowerCase(),l=pool().filter(r=>(!S.f||r.s===S.f)&&(r.type+r.id+r.stu).toLowerCase().includes(q));return l.length?l.map(r=>row(r,S.role!=='student')).join(''):'<div class="empty">Aucune demande ne correspond. Modifiez la recherche ou le filtre.</div>'};
+const urows=()=>{const q=S.q.toLowerCase(),l=U.map((u,i)=>[u,i]).filter(([u])=>(u.n+u.m).toLowerCase().includes(q));return l.length?l.map(([u,i])=>`<div class="row" style="cursor:default"><span class="av sm">${u.n.split(' ').map(x=>x[0]).join('')}</span><div class="g"><b>${u.n}</b><small>${u.m} – ${u.f}</small></div><button class="ib" title="Réinitialiser le mot de passe" onclick="toast('Lien de réinitialisation envoyé')">${ic('key-round')}</button><button class="sw ${u.on?'on':''}" title="Activer ou suspendre" onclick="tg(U,${i},'Compte')"></button></div>`).join(''):'<div class="empty">Aucun utilisateur trouvé.</div>'};
+const bar=sel=>`<div class="bar"><label class="sb">${ic('search')}<input placeholder="Rechercher" value="${esc(S.q)}" oninput="S.q=this.value;upd()"></label>${sel?`<select onchange="S.f=this.value;upd()"><option value="">Tous les statuts</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${S.f===k?'selected':''}>${v[0]}</option>`).join('')}</select>`:''}</div>`;
+const lv=()=>bar(S.view!=='queue')+`<div class="card list" id="lst">${rows()}</div>`;
+const V={
+dash(){
+ if(S.role==='student'){const m=R.filter(r=>r.stu===ME);return `<div class="hello"><div><h3>Bonjour, Aïcha</h3><small>Suivez vos démarches administratives.</small></div><button class="btn" onclick="go('new')">${ic('plus')}Nouvelle demande</button></div><div class="grid">${st('Total',m.length,'blue','files')}${st('En attente',cnt('pending',m)+cnt('info',m),'orange','clock')}${st('Validées',cnt('ok',m),'green','circle-check')}${st('Rejetées',cnt('ko',m),'red','circle-x')}</div><h4>Dernières demandes</h4><div class="card list">${m.slice(0,3).map(r=>row(r)).join('')}</div>`}
+ if(S.role==='agent')return `<div class="hello"><div><h3>Bonjour, M. Tchoua</h3><small>${cnt('pending')} demande(s) attendent votre traitement.</small></div><button class="btn" onclick="go('queue')">${ic('inbox')}Voir la file</button></div><div class="grid">${st('À traiter',cnt('pending'),'orange','inbox')}${st('Pièces demandées',cnt('info'),'orange','paperclip')}${st('Validées',cnt('ok'),'green','circle-check')}${st('Rejetées',cnt('ko'),'red','circle-x')}</div><h4>Prochaines demandes</h4><div class="card list">${R.filter(r=>r.s==='pending').slice(0,4).map(r=>row(r,1)).join('')||'<div class="empty">File vide : tout est traité.</div>'}</div>`;
+ return `<div class="grid">${st('Étudiants actifs',U.filter(u=>u.on).length,'blue','users')}${st('Agents actifs',A.filter(a=>a.on).length,'blue','user-cog')}${st('Services actifs',SV.filter(s=>s.on).length,'blue','building-2')}${st('Demandes',R.length,'blue','files')}</div><h4>Répartition des demandes</h4><div class="card pad">${Object.entries(ST).map(([k,v])=>`<div class="bar2 ${v[1]}"><span>${v[0]}</span><div><i style="width:${cnt(k)/R.length*100}%"></i></div><b>${cnt(k)}</b></div>`).join('')}</div>`},
+new(){return `<div class="f"><h4>Type de demande</h4><div class="types">${TYPES.map((t,i)=>`<button class="type ${ND.t===i?'on':''}" onclick="ND.t=${i};pgr()">${ic(t[1])}<b>${t[0]}</b><small>${t[2]}</small></button>`).join('')}</div><label>Motif de la demande</label><textarea id="nm" rows="4" oninput="ND.m=this.value" placeholder="Précisez l’objet de votre demande">${esc(ND.m)}</textarea><div class="emsg" id="ne"></div><label>Pièces jointes</label><label class="drop">${ic('upload')}Ajouter des fichiers<input type="file" multiple hidden onchange="addF(this)"></label><div class="files">${ND.f.map((f,i)=>`<span class="chip">${ic('paperclip')}${f}<button onclick="ND.f.splice(${i},1);pgr()">${ic('x')}</button></span>`).join('')}</div><button class="btn ghost" style="margin-top:8px" onclick="ND.f.push('justificatif.pdf');pgr()">Joindre un exemple</button><div><button class="btn" style="margin-top:16px" onclick="send()">${ic('send')}Envoyer la demande</button></div></div>`},
+mine:lv,queue:lv,sup:lv,
+hist(){return S.role==='agent'?lv():R.filter(r=>r.stu===ME).map(r=>`<h4>${r.id} – ${r.type}</h4><div class="card pad">${tl(r.ev)}</div>`).join('')},
+detail(){const r=cur(),a=S.role==='agent'&&r.s==='pending',u=S.role==='student'&&r.s==='info';
+ return `<button class="btn ghost" onclick="go(S.prev)">${ic('arrow-left')}Retour</button><div class="card pad" style="margin-top:12px"><div class="between" style="margin:0"><div><h3>${r.type}</h3><small>${r.id}</small></div>${bd(r.s)}</div><dl>${[['Étudiant',r.stu],['Service',r.svc],['Déposée le',r.date],['Agent','M. Tchoua']].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl><p>${r.msg}</p><div class="files">${r.files.map(f=>`<span class="chip">${ic('paperclip')}${f}</span>`).join('')||'<small>Aucune pièce jointe</small>'}</div></div>${a?`<div class="acts"><button class="btn ok" onclick="confirmOk()">${ic('check')}Valider</button><button class="btn ko" onclick="reason('ko')">${ic('x')}Rejeter</button><button class="btn ghost" onclick="reason('info')">${ic('paperclip')}Demander des pièces</button></div>`:''}${u?`<div class="acts"><button class="btn" onclick="addPiece()">${ic('upload')}Ajouter la pièce demandée</button></div>`:''}<h4>Chronologie</h4><div class="card pad">${tl(r.ev)}</div>`},
+notifs(){return `<div class="between"><small>${unread()} non lue(s)</small><button class="btn ghost" onclick="N.forEach(n=>n.r=1);render();toast('Notifications marquées comme lues')">Tout marquer comme lu</button></div><div class="card list">${N.map((n,i)=>`<div class="row ${n.r?'':'unread'}" onclick="rd(${i})"><span class="ico">${ic(n.i)}</span><div class="g"><b>${n.t}</b><small>${n.d}</small></div>${n.r?'':'<span class="dot"></span>'}</div>`).join('')}</div>`},
+profile(){return `<div class="card pad prof"><span class="av">AM</span><div><h3>${ME}</h3><small>${MAIL.student}</small><br><small>Génie informatique, niveau 3</small></div></div><div class="card pad"><h4 style="margin-top:0">Paramètres</h4>${['Alertes de changement de statut','Alertes de pièces demandées'].map(l=>`<div class="between st" style="margin:0"><span>${l}</span><button class="sw on" onclick="this.classList.toggle('on');toast('Paramètre enregistré')"></button></div>`).join('')}</div><button class="btn ko" onclick="logout()">${ic('log-out')}Se déconnecter</button>`},
+users(){return bar(0)+`<div class="card list" id="lst">${urows()}</div>`},
+agents(){return `<div class="between"><small>${A.length} agents</small><button class="btn" onclick="agentModal()">${ic('plus')}Ajouter un agent</button></div><div class="card list">${A.map((a,i)=>`<div class="row" style="cursor:default"><span class="av sm">${a.n.replace(/^(M\.|Mme) /,'')[0]}</span><div class="g"><b>${a.n}</b><small>${a.s}</small></div>${bd(a.on?'ok':'ko').replace(a.on?'Validée':'Rejetée',a.on?'Actif':'Suspendu')}<button class="sw ${a.on?'on':''}" onclick="tg(A,${i},'Agent')"></button></div>`).join('')}</div>`},
+services(){return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">${SV.map((s,i)=>`<div class="card pad ${s.on?'green':'red'}"><div class="between"><b>${s.n}</b><button class="sw ${s.on?'on':''}" onclick="tg(SV,${i},'Service')"></button></div><small>${A.filter(a=>a.s===s.n).length} agent(s) – ${R.filter(r=>r.svc===s.n).length} demande(s)</small></div>`).join('')}</div>`}
+};
+function login(){return `<div class="main" style="justify-content:center"><div class="login"><div class="logo">${ic('network')}</div><h1>N.O.H. CloudMesh</h1><small>Espace ${ROLES[S.role].toLowerCase()} – accessible sur le réseau du campus</small><form class="f" onsubmit="return doLogin(event)"><label>Adresse e-mail</label><input id="em" value="${MAIL[S.role]}"><label>Mot de passe</label><input id="pw" type="password" value="demo1234"><div class="emsg" id="le"></div><button class="btn" style="width:100%;margin-top:16px">Se connecter</button></form></div></div>`}
+function shell(){const un=unread(),it=n=>`<button class="${S.view===n[0]?'on':''}" onclick="go('${n[0]}')">${ic(n[1])}<span>${n[2]}</span>${n[0]==='notifs'&&un?`<em>${un}</em>`:''}</button>`;
+ return `<aside class="side"><div class="brand">${ic('network')} N.O.H. CloudMesh</div>${NAV[S.role].map(it).join('')}<div class="who"><b>${USER[S.role]}</b><small style="color:#94A3B8">${ROLES[S.role]}</small><button onclick="logout()">${ic('log-out')}Déconnexion</button></div></aside><div class="main"><header class="head"><h2>${title()}</h2>${S.role==='student'?`<button class="ib" onclick="go('notifs')">${ic('bell')}${un?`<em>${un}</em>`:''}</button>`:`<button class="ib" onclick="logout()">${ic('log-out')}</button>`}</header><div class="page" id="pg">${V[S.view]()}</div></div><nav class="tabs">${NAV[S.role].map(it).join('')}</nav>`}
+function render(){const d=$('#dev');d.className='device '+S.dev;d.innerHTML=S.auth?shell():login();icons();sync()}
+const pgr=()=>{$('#pg').innerHTML=V[S.view]();icons()};
+const upd=()=>{$('#lst').innerHTML=S.view==='users'?urows():rows();icons()};
+const go=v=>{S.view=v;S.q='';S.f='';render()};
+const openR=id=>{S.prev=S.view;S.id=id;S.view='detail';render()};
+const logout=()=>{S.auth=false;S.view='dash';render();toast('Vous êtes déconnecté')};
+function doLogin(e){e.preventDefault();const em=$('#em'),pw=$('#pw');[em,pw].forEach(x=>x.classList.remove('err'));
+ if(!em.value.includes('@')){em.classList.add('err');$('#le').textContent='Saisissez une adresse e-mail valide.';return false}
+ if(pw.value!=='demo1234'){pw.classList.add('err');$('#le').textContent='Mot de passe incorrect (démo : demo1234).';return false}
+ S.auth=true;S.view='dash';render();toast('Connexion réussie');return false}
+function toast(m,t='ok'){const e=document.createElement('div');e.className='toast '+t;e.innerHTML=ic(t==='ok'?'circle-check':'circle-alert')+`<span>${m}</span>`;$('#dev').append(e);icons();setTimeout(()=>e.remove(),2800)}
+function modal(h){closeM();const m=document.createElement('div');m.className='ov';m.innerHTML=`<div class="md f">${h}</div>`;m.onclick=e=>e.target===m&&m.remove();$('#dev').append(m);icons()}
+const closeM=()=>document.querySelector('.ov')?.remove();
+const confirmOk=()=>modal(`<h3>Valider la demande ?</h3><p class="mut">${cur().id} – ${cur().stu}. L’étudiant sera notifié.</p><div class="mact"><button class="btn ghost" onclick="closeM()">Annuler</button><button class="btn ok" onclick="doOk()">Valider</button></div>`);
+function doOk(){const r=cur();r.s='ok';r.ev.push(E(now(),'Demande validée','Validée par M. Tchoua.','green'));closeM();render();toast('Demande validée')}
+const reason=k=>modal(`<h3>${k==='ko'?'Rejeter la demande':'Demander des pièces complémentaires'}</h3>${k==='ko'?`<label>Motif</label><select id="mo">${['Dossier incomplet','Pièces illisibles','Demande hors délai','Autre motif'].map(x=>`<option>${x}</option>`).join('')}</select>`:''}<label>${k==='ko'?'Précisions':'Pièces à fournir'}</label><textarea id="mt" rows="3" placeholder="Expliquez clairement à l’étudiant"></textarea><div class="emsg" id="me"></div><div class="mact"><button class="btn ghost" onclick="closeM()">Annuler</button><button class="btn ${k==='ko'?'ko':''}" onclick="decide('${k}')">${k==='ko'?'Rejeter':'Demander les pièces'}</button></div>`);
+function decide(k){const t=$('#mt').value.trim();if(t.length<5){$('#mt').classList.add('err');$('#me').textContent='Saisissez au moins 5 caractères.';return}
+ const r=cur();r.s=k;r.ev.push(E(now(),k==='ko'?'Demande rejetée':'Pièces demandées',(k==='ko'?$('#mo').value+' : ':'')+esc(t),k==='ko'?'red':'orange'));closeM();render();toast(k==='ko'?'Demande rejetée':'Pièces demandées à l’étudiant',k==='ko'?'err':'ok')}
+function addPiece(){const r=cur();r.files.push('piece-complementaire.pdf');r.s='pending';r.ev.push(E(now(),'Pièce ajoutée','Document envoyé pour compléter le dossier.'));render();toast('Pièce envoyée')}
+function addF(i){[...i.files].forEach(f=>ND.f.push(esc(f.name)));pgr()}
+function send(){if(ND.t===null)return toast('Choisissez un type de demande.','err');const m=ND.m.trim();
+ if(m.length<10){$('#nm').classList.add('err');$('#ne').textContent='Décrivez votre demande en 10 caractères minimum.';return toast('Le motif est trop court.','err')}
+ const id='DEM-0'+(R.length+37);R.unshift(Q(id,TYPES[ND.t][0],ME,'17 nov','pending',esc(m),ND.f.slice(),[E(now(),'Demande soumise',ND.f.length+' pièce(s) jointe(s) envoyée(s).')]));
+ N.unshift({t:`Demande ${id} envoyée`,d:'À l’instant',r:0,i:'send',go:id});ND={t:null,m:'',f:[]};S.view='mine';render();toast('Demande envoyée')}
+function rd(i){N[i].r=1;N[i].go?openR(N[i].go):render()}
+function tg(a,i,l){a[i].on=a[i].on?0:1;S.view==='users'?upd():pgr();toast(`${l} ${a[i].on?'activé':'suspendu'}`)}
+const agentModal=()=>modal(`<h3>Ajouter un agent</h3><label>Nom complet</label><input id="an" placeholder="Ex. M. Bella"><div class="emsg" id="ae"></div><label>Service</label><select id="as">${SV.map(s=>`<option>${s.n}</option>`).join('')}</select><div class="mact"><button class="btn ghost" onclick="closeM()">Annuler</button><button class="btn" onclick="addAgent()">Ajouter l’agent</button></div>`);
+function addAgent(){const n=$('#an').value.trim();if(n.length<3){$('#an').classList.add('err');$('#ae').textContent='Saisissez le nom de l’agent.';return}
+ A.push({n:esc(n),s:$('#as').value,on:1});closeM();pgr();toast('Agent ajouté')}
+function sync(){document.querySelectorAll('#sd button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.dev));document.querySelectorAll('#sr button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.role))}
+document.querySelectorAll('#sd button').forEach(b=>b.onclick=()=>{S.dev=b.dataset.v;render()});
+document.querySelectorAll('#sr button').forEach(b=>b.onclick=()=>{S.role=b.dataset.v;S.auth=false;S.view='dash';render()});
+render();
