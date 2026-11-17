@@ -3,123 +3,130 @@ import 'dart:convert';
 import 'package:noh_common/framing.dart';
 import 'package:test/test.dart';
 
-List<String> decoded(List<List<int>> lines) =>
-    lines.map((line) => utf8.decode(line)).toList();
+List<String> decoded(List<List<int>> messages) =>
+    messages.map((msg) => utf8.decode(msg)).toList();
 
 void main() {
-  group('LineFramer', () {
-    test('une ligne complète est découpée', () {
-      final framer = LineFramer();
+  group('LengthPrefixFramer', () {
+    test('un message complet est décodé', () {
+      final framer = LengthPrefixFramer();
+      final json = '{"id":1,"type":"echo"}';
+      final body = utf8.encode(json);
+      final frame = encodeFrame(body);
 
-      final lines = framer.add(utf8.encode('{"id":1,"type":"echo"}\n'));
+      final messages = framer.add(frame);
 
-      expect(decoded(lines), equals(['{"id":1,"type":"echo"}']));
+      expect(decoded(messages), equals([json]));
     });
 
-    test('une ligne coupée en trois morceaux est reconstruite', () {
-      final framer = LineFramer();
-      final bytes = utf8.encode('{"id":2,"type":"echo"}\n');
+    test('un message coupé en plusieurs morceaux est reconstruit', () {
+      final framer = LengthPrefixFramer();
+      final json = '{"id":2,"type":"echo"}';
+      final body = utf8.encode(json);
+      final frame = encodeFrame(body);
 
-      final premier = framer.add(bytes.sublist(0, 5));
-      final deuxieme = framer.add(bytes.sublist(5, 12));
-      final troisieme = framer.add(bytes.sublist(12));
+      final premier = framer.add(frame.sublist(0, 3));
+      final deuxieme = framer.add(frame.sublist(3, 8));
+      final troisieme = framer.add(frame.sublist(8));
 
       expect(premier, isEmpty);
       expect(deuxieme, isEmpty);
-      expect(decoded(troisieme), equals(['{"id":2,"type":"echo"}']));
+      expect(decoded(troisieme), equals([json]));
     });
 
-    test('deux lignes dans un même morceau donnent deux messages', () {
-      final framer = LineFramer();
+    test('deux messages dans un même bloc donnent deux messages', () {
+      final framer = LengthPrefixFramer();
+      final json1 = '{"id":3,"type":"echo"}';
+      final json2 = '{"id":4,"type":"echo"}';
+      final body1 = utf8.encode(json1);
+      final body2 = utf8.encode(json2);
+      final frame = [...encodeFrame(body1), ...encodeFrame(body2)];
 
-      final lines = framer.add(
-        utf8.encode('{"id":3,"type":"echo"}\n{"id":4,"type":"echo"}\n'),
-      );
+      final messages = framer.add(frame);
 
-      expect(decoded(lines), equals([
-        '{"id":3,"type":"echo"}',
-        '{"id":4,"type":"echo"}',
-      ]));
+      expect(decoded(messages), equals([json1, json2]));
     });
 
     test('un message incomplet reste en attente', () {
-      final framer = LineFramer();
+      final framer = LengthPrefixFramer();
+      final json = '{"id":5,"type":"echo"}';
+      final body = utf8.encode(json);
+      final frame = encodeFrame(body);
 
-      final avant = framer.add(utf8.encode('{"id":5'));
-      final apres = framer.add(utf8.encode(',"type":"echo"}\n'));
+      final avant = framer.add(frame.sublist(0, 5));
+      final apres = framer.add(frame.sublist(5));
 
       expect(avant, isEmpty);
-      expect(decoded(apres), equals(['{"id":5,"type":"echo"}']));
+      expect(decoded(apres), equals([json]));
     });
 
-    test('le \\r précédant le LF est retiré', () {
-      final framer = LineFramer();
+    test('un message vide est accepté', () {
+      final framer = LengthPrefixFramer();
+      final frame = encodeFrame([]);
 
-      final lines = framer.add(utf8.encode('{"id":6}\r\n'));
+      final messages = framer.add(frame);
 
-      expect(decoded(lines), equals(['{"id":6}']));
+      expect(messages, isEmpty);
     });
 
-    test('les lignes vides sont ignorées', () {
-      final framer = LineFramer();
+    test('un message de exactement la limite est accepté', () {
+      final framer = LengthPrefixFramer(maxLength: 20);
+      final body = List<int>.filled(20, 0x61);
+      final frame = encodeFrame(body);
 
-      expect(framer.add(utf8.encode('\n')), isEmpty);
-      expect(framer.add(utf8.encode('\r\n')), isEmpty);
+      final messages = framer.add(frame);
+
+      expect(messages.single, equals(body));
     });
 
-    test('une ligne de exactement la limite est acceptée', () {
-      final framer = LineFramer(maxLength: 8);
-
-      final lines = framer.add(utf8.encode('12345678\n'));
-
-      expect(decoded(lines), equals(['12345678']));
-    });
-
-    test('une ligne de exactement la limite suivie de CRLF est acceptée', () {
-      final framer = LineFramer(maxLength: 8);
-
-      final lines = framer.add(utf8.encode('12345678\r\n'));
-
-      expect(decoded(lines), equals(['12345678']));
-    });
-
-    test('une ligne au-delà de la limite lève FrameTooLargeException', () {
-      final framer = LineFramer(maxLength: 16);
+    test('un message au-delà de la limite lève FrameTooLargeException', () {
+      final framer = LengthPrefixFramer(maxLength: 16);
+      final body = List<int>.filled(17, 0x61);
+      final frame = encodeFrame(body);
 
       expect(
-        () => framer.add(utf8.encode('x' * 17)),
+        () => framer.add(frame),
         throwsA(isA<FrameTooLargeException>()),
       );
-    });
-
-    test('la limite compte les octets UTF-8, pas les caractères', () {
-      // 'é' occupe 2 octets : 7 caractères font 14 octets, 8 en font 16.
-      final framer = LineFramer(maxLength: 15);
-
-      expect(decoded(framer.add(utf8.encode('é' * 7 + '\n'))),
-          equals(['é' * 7]));
-      expect(
-        () => LineFramer(maxLength: 15).add(utf8.encode('é' * 8)),
-        throwsA(isA<FrameTooLargeException>()),
-      );
-    });
-
-    test('une séquence UTF-8 invalide est renvoyée en octets, sans exception', () {
-      final framer = LineFramer();
-
-      final lines = framer.add([0xff, 0x0a]);
-
-      expect(lines.single, equals([0xff]));
     });
 
     test('la limite par défaut est de 1 Mo', () {
-      final framer = LineFramer();
-      final tropGrand = List<int>.filled(1048577, 0x61);
+      final framer = LengthPrefixFramer();
+      final body = List<int>.filled(1048577, 0x61);
+      final frame = encodeFrame(body);
 
       expect(
-        () => framer.add(tropGrand),
+        () => framer.add(frame),
         throwsA(isA<FrameTooLargeException>()),
       );
+    });
+
+    test('reset vide le buffer et réinitialise l\'état', () {
+      final framer = LengthPrefixFramer();
+      final json = '{"id":6}';
+      final body = utf8.encode(json);
+      final frame = encodeFrame(body);
+
+      framer.add(frame.sublist(0, 3));
+      framer.reset();
+
+      final messages = framer.add(frame);
+
+      expect(decoded(messages), equals([json]));
+    });
+
+    test('encodeFrame produit le bon format', () {
+      final body = utf8.encode('test');
+      final frame = encodeFrame(body);
+
+      // Les 4 premiers octets doivent être la longueur en Big Endian
+      expect(frame[0], equals(0x00));
+      expect(frame[1], equals(0x00));
+      expect(frame[2], equals(0x00));
+      expect(frame[3], equals(0x04));
+
+      // Le corps doit suivre
+      expect(frame.sublist(4), equals(body));
     });
   });
 }
