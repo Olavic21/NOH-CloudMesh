@@ -1,0 +1,72 @@
+name: CI - Server
+
+on:
+  push:
+    branches: [ dev, main ]
+    paths:
+      - 'server/**'
+      - 'common/**'
+  pull_request:
+    branches: [ dev, main ]
+    paths:
+      - 'server/**'
+      - 'common/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: noh_cloudmesh_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Dart
+      uses: dart-lang/setup-dart@v1
+      with:
+        sdk: '3.5'
+    
+    - name: Install common dependencies
+      working-directory: ./common
+      run: dart pub get
+    
+    - name: Install server dependencies
+      working-directory: ./server
+      run: dart pub get
+    
+    - name: Verify formatting
+      working-directory: ./server
+      run: dart format --output=none --set-exit-if-changed .
+    
+    - name: Analyze code
+      working-directory: ./server
+      run: dart analyze
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: noh_cloudmesh_test
+    
+    - name: Run tests
+      working-directory: ./server
+      run: dart test
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: noh_cloudmesh_test

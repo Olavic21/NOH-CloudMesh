@@ -1,0 +1,28 @@
+name: CI - Global
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  common:
+    uses: ./.github/workflows/ci-common.yml
+    if: |
+      contains(github.event.head_commit.modified, 'common/') ||
+      contains(github.event.head_commit.modified, '.github/workflows/')
+  
+  server:
+    uses: ./.github/workflows/ci-server.yml
+    if: |
+      contains(github.event.head_commit.modified, 'server/') ||
+      contains(github.event.head_commit.modified, 'common/') ||
+      contains(github.event.head_commit.modified, '.github/workflows/')
+  
+  client:
+    uses: ./.github/workflows/ci-client.yml
+    if: |
+      contains(github.event.head_commit.modified, 'client/') ||
+      contains(github.event.head_commit.modified, 'common/') ||
+      contains(github.event.head_commit.modified, '.github/workflows/')

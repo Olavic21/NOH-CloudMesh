@@ -1,0 +1,40 @@
+name: CI - Common Code
+
+on:
+  push:
+    branches: [ dev, main ]
+    paths:
+      - 'common/**'
+  pull_request:
+    branches: [ dev, main ]
+    paths:
+      - 'common/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Dart
+      uses: dart-lang/setup-dart@v1
+      with:
+        sdk: '3.5'
+    
+    - name: Install dependencies
+      working-directory: ./common
+      run: dart pub get
+    
+    - name: Verify formatting
+      working-directory: ./common
+      run: dart format --output=none --set-exit-if-changed .
+    
+    - name: Analyze code
+      working-directory: ./common
+      run: dart analyze
+    
+    - name: Run tests
+      working-directory: ./common
+      run: dart test
