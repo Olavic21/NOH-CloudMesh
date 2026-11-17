@@ -1,6 +1,10 @@
-import 'package:noh_server/src/net/echo_server.dart';
+import 'package:noh_server/src/net/tcp_server.dart';
 
 Future<void> main() async {
-  final server = await startEchoServer(port: 4000);
-  print('Écho TCP en écoute sur ${server.address.address}:${server.port}');
+  final server = TcpServer(port: 4000);
+  await server.start();
+  print('N.O.H. CloudMesh server started');
+
+  // Garder le serveur en cours d'exécution
+  // Pour arrêter, appuyez sur Ctrl+C
 }
