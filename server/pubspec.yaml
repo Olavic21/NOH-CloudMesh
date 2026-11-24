@@ -9,7 +9,7 @@ environment:
 dependencies:
   noh_common:
     path: ../common
-  postgres: ^3.0.0
+  sqlite3: ^2.4.0
   crypto: ^3.0.3
 
 dev_dependencies:

@@ -68,10 +68,8 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() {
             _isLoading = false;
           });
-          // TODO: Naviguer vers l'écran principal
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Connexion réussie !')),
-          );
+          // Naviguer vers l'écran de profil
+          Navigator.of(context).pushReplacementNamed('/profile');
         }
       } else {
         // Connexion échouée

@@ -107,6 +107,70 @@ class AuthService {
     disconnect();
   }
 
+  /// Récupère le profil de l'utilisateur connecté.
+  Future<User?> getProfile() async {
+    if (_token == null) return null;
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.getProfile,
+      token: _token,
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('GetProfile failed: ${response.error}');
+      return null;
+    }
+
+    final data = response.data;
+    if (data == null) return null;
+
+    final userData = data['user'] as Map<String, dynamic>?;
+    if (userData == null) return null;
+
+    _currentUser = User.fromJson(userData);
+    return _currentUser;
+  }
+
+  /// Met à jour le profil de l'utilisateur connecté.
+  Future<bool> updateProfile({
+    String? fullName,
+    String? email,
+  }) async {
+    if (_token == null) return false;
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.updateProfile,
+      token: _token,
+      payload: {
+        if (fullName != null) 'full_name': fullName,
+        if (email != null) 'email': email,
+      },
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('UpdateProfile failed: ${response.error}');
+      return false;
+    }
+
+    final data = response.data;
+    if (data == null) return false;
+
+    final userData = data['user'] as Map<String, dynamic>?;
+    if (userData != null) {
+      _currentUser = User.fromJson(userData);
+    }
+
+    return true;
+  }
+
   /// Génère un ID de requête aléatoire.
   String _generateRequestId() {
     final random = Random();

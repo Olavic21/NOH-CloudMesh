@@ -5,6 +5,8 @@ library;
 enum RequestAction {
   login('LOGIN'),
   logout('LOGOUT'),
+  getProfile('GET_PROFILE'),
+  updateProfile('UPDATE_PROFILE'),
   getMyRequests('GET_MY_REQUESTS'),
   submitRequest('SUBMIT_REQUEST'),
   updateRequest('UPDATE_REQUEST'),

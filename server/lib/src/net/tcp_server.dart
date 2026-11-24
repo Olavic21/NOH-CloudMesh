@@ -7,6 +7,8 @@ import 'dart:io';
 import 'package:noh_common/framing.dart';
 import 'package:noh_common/protocol.dart';
 import '../../auth/login_handler.dart';
+import '../../auth/logout_handler.dart';
+import '../../auth/profile_handler.dart';
 import '../../database/database.dart';
 
 /// Serveur TCP qui traite les requêtes clients avec Length-Prefix Framing.
@@ -17,10 +19,12 @@ class TcpServer {
   ServerSocket? _server;
   final LengthPrefixFramer _framer = LengthPrefixFramer();
   final LoginHandler _loginHandler = LoginHandler.instance;
+  final LogoutHandler _logoutHandler = LogoutHandler.instance;
+  final ProfileHandler _profileHandler = ProfileHandler.instance;
 
   /// Démarre le serveur TCP.
   Future<void> start() async {
-    // Connecter à la base de données
+    // Connecter à la base de données SQLite
     await DatabaseService.instance.connect();
 
     // Lier le serveur sur le port spécifié
@@ -99,6 +103,11 @@ class TcpServer {
     switch (request.action) {
       case RequestAction.login:
         return await _loginHandler.handle(request);
+      case RequestAction.logout:
+        return await _logoutHandler.handle(request);
+      case RequestAction.getProfile:
+      case RequestAction.updateProfile:
+        return await _profileHandler.handle(request);
       default:
         return Response.error(
           request.requestId,

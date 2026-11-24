@@ -1,90 +1,111 @@
-/// Service de connexion à la base de données PostgreSQL.
+/// Service de connexion à la base de données SQLite.
 library;
 
-import 'package:postgres/postgres.dart';
+import 'dart:io';
 
-/// Service singleton pour la connexion PostgreSQL.
+import 'package:sqlite3/sqlite3.dart';
+
+/// Service singleton pour la connexion SQLite.
 class DatabaseService {
   DatabaseService._();
 
   static final DatabaseService _instance = DatabaseService._();
   static DatabaseService get instance => _instance;
 
-  Connection? _connection;
+  Database? _db;
 
-  /// Connexion active à la base de données.
-  Connection get connection {
-    if (_connection == null) {
+  /// Base de données active.
+  Database get db {
+    if (_db == null) {
       throw StateError('Database not connected. Call connect() first.');
     }
-    return _connection!;
+    return _db!;
   }
 
   /// État de la connexion.
-  bool get isConnected => _connection != null && _connection!.isOpen;
+  bool get isConnected => _db != null;
 
-  /// Connecte à la base de données PostgreSQL.
+  /// Connecte à la base de données SQLite.
   ///
-  /// Les paramètres de connexion sont lus depuis les variables d'environnement
-  /// ou utilisent des valeurs par défaut pour le développement.
-  Future<void> connect({
-    String host = 'localhost',
-    int port = 5432,
-    String database = 'noh_cloudmesh',
-    String username = 'postgres',
-    String password = 'postgres',
-  }) async {
+  /// Crée le fichier de base de données s'il n'existe pas.
+  Future<void> connect({String path = 'noh_cloudmesh.db'}) async {
     if (isConnected) {
       return;
     }
 
-    _connection = await Connection.open(
-      Endpoint(
-        host: host,
-        port: port,
-        database: database,
-        username: username,
-        password: password,
-      ),
-    );
+    _db = sqlite3.open(path);
+    print('Connected to SQLite database: $path');
 
-    print('Connected to PostgreSQL database: $database');
+    // Exécuter le schéma si la base est vide
+    await _initializeSchema();
+  }
+
+  /// Initialise le schéma de la base de données.
+  Future<void> _initializeSchema() async {
+    final schemaFile = File('../database/schema_sqlite.sql');
+    if (await schemaFile.exists()) {
+      final schema = await schemaFile.readAsString();
+      db.execute(schema);
+      print('Schema initialized');
+    } else {
+      print('Warning: schema_sqlite.sql not found');
+    }
   }
 
   /// Ferme la connexion à la base de données.
   Future<void> close() async {
-    if (_connection != null && _connection!.isOpen) {
-      await _connection!.close();
-      _connection = null;
+    if (_db != null) {
+      _db!.dispose();
+      _db = null;
       print('Database connection closed.');
     }
   }
 
   /// Exécute une requête SQL et retourne les résultats.
-  Future<Result> execute(String query, {Map<String, dynamic>? parameters}) async {
+  Future<ResultSet> execute(String query, [List<Object?>? parameters]) async {
     if (!isConnected) {
       throw StateError('Database not connected.');
     }
 
-    return await connection.execute(query, parameters: parameters);
+    return db.select(query, parameters ?? []);
   }
 
   /// Exécute une requête SQL et retourne la première ligne.
   Future<Map<String, dynamic>?> queryOne(
-    String query, {
-    Map<String, dynamic>? parameters,
-  }) async {
-    final result = await execute(query, parameters: parameters);
+    String query, [
+    List<Object?>? parameters,
+  ]) async {
+    final result = await execute(query, parameters);
     if (result.isEmpty) return null;
-    return result.first.toColumnMap();
+    return result.first;
   }
 
   /// Exécute une requête SQL et retourne toutes les lignes.
   Future<List<Map<String, dynamic>>> queryAll(
-    String query, {
-    Map<String, dynamic>? parameters,
-  }) async {
-    final result = await execute(query, parameters: parameters);
-    return result.map((row) => row.toColumnMap()).toList();
+    String query, [
+    List<Object?>? parameters,
+  ]) async {
+    final result = await execute(query, parameters);
+    return result.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  /// Exécute une requête INSERT et retourne l'ID inséré.
+  Future<int> insert(String query, [List<Object?>? parameters]) async {
+    if (!isConnected) {
+      throw StateError('Database not connected.');
+    }
+
+    db.execute(query, parameters ?? []);
+    return db.lastInsertRowId;
+  }
+
+  /// Exécute une requête UPDATE ou DELETE et retourne le nombre de lignes affectées.
+  Future<int> executeUpdate(String query, [List<Object?>? parameters]) async {
+    if (!isConnected) {
+      throw StateError('Database not connected.');
+    }
+
+    db.execute(query, parameters ?? []);
+    return db.updatedRows;
   }
 }

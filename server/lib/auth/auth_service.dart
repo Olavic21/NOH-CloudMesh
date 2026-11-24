@@ -48,8 +48,8 @@ class AuthService {
     // 1. Chercher l'utilisateur par username
     final userResult = await _db.queryOne(
       'SELECT id, username, email, role, full_name, service_id, password_hash '
-      'FROM users WHERE username = @username',
-      parameters: {'username': username},
+      'FROM users WHERE username = ?',
+      [username],
     );
 
     if (userResult == null) {
@@ -70,16 +70,15 @@ class AuthService {
     final now = DateTime.now();
     final expiresAt = now.add(const Duration(hours: 24));
 
-    final sessionResult = await _db.queryOne(
+    final sessionId = await _db.insert(
       'INSERT INTO sessions (user_id, token, created_at, expires_at) '
-      'VALUES (@user_id, @token, @created_at, @expires_at) '
-      'RETURNING id, user_id, token, created_at, expires_at',
-      parameters: {
-        'user_id': userId,
-        'token': token,
-        'created_at': now.toIso8601String(),
-        'expires_at': expiresAt.toIso8601String(),
-      },
+      'VALUES (?, ?, ?, ?)',
+      [userId, token, now.toIso8601String(), expiresAt.toIso8601String()],
+    );
+
+    final sessionResult = await _db.queryOne(
+      'SELECT id, user_id, token, created_at, expires_at FROM sessions WHERE id = ?',
+      [sessionId],
     );
 
     if (sessionResult == null) {
@@ -87,7 +86,7 @@ class AuthService {
       return null;
     }
 
-    print('User logged in: $username, session created: ${sessionResult['id']}');
+    print('User logged in: $username, session created: $sessionId');
 
     return Session.fromPostgresRow(sessionResult);
   }
@@ -96,8 +95,8 @@ class AuthService {
   Future<User?> getUserById(int userId) async {
     final result = await _db.queryOne(
       'SELECT id, username, email, role, full_name, service_id, created_at '
-      'FROM users WHERE id = @user_id',
-      parameters: {'user_id': userId},
+      'FROM users WHERE id = ?',
+      [userId],
     );
 
     if (result == null) return null;
@@ -108,8 +107,8 @@ class AuthService {
   /// Récupère un utilisateur par son jeton de session.
   Future<User?> getUserByToken(String token) async {
     final sessionResult = await _db.queryOne(
-      'SELECT user_id, expires_at FROM sessions WHERE token = @token',
-      parameters: {'token': token},
+      'SELECT user_id, expires_at FROM sessions WHERE token = ?',
+      [token],
     );
 
     if (sessionResult == null) {
@@ -118,10 +117,13 @@ class AuthService {
     }
 
     // Vérifier l'expiration
-    final expiresAt = sessionResult['expires_at'] as DateTime?;
-    if (expiresAt != null && DateTime.now().isAfter(expiresAt)) {
-      print('Session expired');
-      return null;
+    final expiresAtStr = sessionResult['expires_at'] as String?;
+    if (expiresAtStr != null) {
+      final expiresAt = DateTime.parse(expiresAtStr);
+      if (DateTime.now().isAfter(expiresAt)) {
+        print('Session expired');
+        return null;
+      }
     }
 
     final userId = sessionResult['user_id'] as int;
@@ -130,12 +132,11 @@ class AuthService {
 
   /// Déconnecte une session (supprime le jeton).
   Future<bool> logout(String token) async {
-    final result = await _db.execute(
-      'DELETE FROM sessions WHERE token = @token',
-      parameters: {'token': token},
+    final deleted = await _db.executeUpdate(
+      'DELETE FROM sessions WHERE token = ?',
+      [token],
     );
 
-    final deleted = result.affectedRows;
     print('Logout: $deleted session(s) deleted');
     return deleted > 0;
   }
@@ -152,19 +153,16 @@ class AuthService {
     final passwordHash = hashPassword(password);
     final now = DateTime.now();
 
-    final result = await _db.queryOne(
+    final userId = await _db.insert(
       'INSERT INTO users (username, email, password_hash, role, full_name, service_id, created_at) '
-      'VALUES (@username, @email, @password_hash, @role, @full_name, @service_id, @created_at) '
-      'RETURNING id, username, email, role, full_name, service_id, created_at',
-      parameters: {
-        'username': username,
-        'email': email,
-        'password_hash': passwordHash,
-        'role': role.value,
-        'full_name': fullName,
-        'service_id': serviceId,
-        'created_at': now.toIso8601String(),
-      },
+      'VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [username, email, passwordHash, role.value, fullName, serviceId, now.toIso8601String()],
+    );
+
+    final result = await _db.queryOne(
+      'SELECT id, username, email, role, full_name, service_id, created_at '
+      'FROM users WHERE id = ?',
+      [userId],
     );
 
     if (result == null) {
