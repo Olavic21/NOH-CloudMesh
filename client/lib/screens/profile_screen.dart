@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:noh_common/models.dart';
 import '../services/auth_service.dart';
 
 /// Écran de profil utilisateur.
@@ -309,6 +310,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
+
+                  // Bouton admin (visible uniquement pour les admins)
+                  if (user?.role == UserRole.admin) ...[
+                    const SizedBox(height: 16),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.admin_panel_settings),
+                        title: const Text('Administration'),
+                        subtitle: const Text('Gérer les utilisateurs'),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          Navigator.of(context).pushNamed('/admin/users');
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -173,4 +173,78 @@ class AuthService {
     print('User created: $username');
     return User.fromPostgresRow(result);
   }
+
+  /// Récupère tous les utilisateurs (pour l'administration).
+  Future<List<User>> listUsers() async {
+    final results = await _db.queryAll(
+      'SELECT id, username, email, role, full_name, service_id, created_at '
+      'FROM users ORDER BY created_at DESC',
+    );
+
+    return results.map((row) => User.fromPostgresRow(row)).toList();
+  }
+
+  /// Met à jour un utilisateur (pour l'administration).
+  Future<User?> updateUser({
+    required int userId,
+    String? username,
+    String? email,
+    String? password,
+    UserRole? role,
+    String? fullName,
+    int? serviceId,
+  }) async {
+    // Construire la requête UPDATE dynamiquement
+    final updates = <String>[];
+    final params = <Object?>[];
+
+    if (username != null) {
+      updates.add('username = ?');
+      params.add(username);
+    }
+    if (email != null) {
+      updates.add('email = ?');
+      params.add(email);
+    }
+    if (password != null) {
+      updates.add('password_hash = ?');
+      params.add(hashPassword(password));
+    }
+    if (role != null) {
+      updates.add('role = ?');
+      params.add(role.value);
+    }
+    if (fullName != null) {
+      updates.add('full_name = ?');
+      params.add(fullName);
+    }
+    if (serviceId != null) {
+      updates.add('service_id = ?');
+      params.add(serviceId);
+    }
+
+    if (updates.isEmpty) {
+      return await getUserById(userId);
+    }
+
+    updates.add('updated_at = ?');
+    params.add(DateTime.now().toIso8601String());
+    params.add(userId);
+
+    final query = 'UPDATE users SET ${updates.join(', ')} WHERE id = ?';
+    await _db.executeUpdate(query, params);
+
+    return await getUserById(userId);
+  }
+
+  /// Supprime un utilisateur (pour l'administration).
+  Future<bool> deleteUser(int userId) async {
+    final deleted = await _db.executeUpdate(
+      'DELETE FROM users WHERE id = ?',
+      [userId],
+    );
+
+    print('User deleted: $userId ($deleted rows affected)');
+    return deleted > 0;
+  }
 }

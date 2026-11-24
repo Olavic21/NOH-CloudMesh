@@ -11,7 +11,12 @@ enum RequestAction {
   submitRequest('SUBMIT_REQUEST'),
   updateRequest('UPDATE_REQUEST'),
   getNotifications('GET_NOTIFICATIONS'),
-  acknowledgeNotification('ACKNOWLEDGE_NOTIFICATION');
+  acknowledgeNotification('ACKNOWLEDGE_NOTIFICATION'),
+  // Actions admin
+  listUsers('LIST_USERS'),
+  createUser('CREATE_USER'),
+  updateUser('UPDATE_USER'),
+  deleteUser('DELETE_USER');
 
   final String value;
   const RequestAction(this.value);

@@ -9,6 +9,7 @@ import 'package:noh_common/protocol.dart';
 import '../../auth/login_handler.dart';
 import '../../auth/logout_handler.dart';
 import '../../auth/profile_handler.dart';
+import '../../auth/user_management_handler.dart';
 import '../../database/database.dart';
 
 /// Serveur TCP qui traite les requêtes clients avec Length-Prefix Framing.
@@ -21,6 +22,7 @@ class TcpServer {
   final LoginHandler _loginHandler = LoginHandler.instance;
   final LogoutHandler _logoutHandler = LogoutHandler.instance;
   final ProfileHandler _profileHandler = ProfileHandler.instance;
+  final UserManagementHandler _userManagementHandler = UserManagementHandler.instance;
 
   /// Démarre le serveur TCP.
   Future<void> start() async {
@@ -108,6 +110,11 @@ class TcpServer {
       case RequestAction.getProfile:
       case RequestAction.updateProfile:
         return await _profileHandler.handle(request);
+      case RequestAction.listUsers:
+      case RequestAction.createUser:
+      case RequestAction.updateUser:
+      case RequestAction.deleteUser:
+        return await _userManagementHandler.handle(request);
       default:
         return Response.error(
           request.requestId,

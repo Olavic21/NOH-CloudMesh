@@ -171,6 +171,133 @@ class AuthService {
     return true;
   }
 
+  // ==================== Méthodes Admin ====================
+
+  /// Liste tous les utilisateurs (admin uniquement).
+  Future<List<User>> listUsers() async {
+    if (_token == null) return [];
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.listUsers,
+      token: _token,
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('ListUsers failed: ${response.error}');
+      return [];
+    }
+
+    final data = response.data;
+    if (data == null) return [];
+
+    final usersData = data['users'] as List<dynamic>?;
+    if (usersData == null) return [];
+
+    return usersData
+        .map((u) => User.fromJson(u as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Crée un nouvel utilisateur (admin uniquement).
+  Future<bool> createUser({
+    required String username,
+    required String email,
+    required String password,
+    required UserRole role,
+    String? fullName,
+    int? serviceId,
+  }) async {
+    if (_token == null) return false;
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.createUser,
+      token: _token,
+      payload: {
+        'username': username,
+        'email': email,
+        'password': password,
+        'role': role.value,
+        if (fullName != null) 'full_name': fullName,
+        if (serviceId != null) 'service_id': serviceId,
+      },
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('CreateUser failed: ${response.error}');
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Met à jour un utilisateur (admin uniquement).
+  Future<bool> updateUser({
+    required int userId,
+    String? username,
+    String? email,
+    String? password,
+    UserRole? role,
+    String? fullName,
+    int? serviceId,
+  }) async {
+    if (_token == null) return false;
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.updateUser,
+      token: _token,
+      payload: {
+        'user_id': userId,
+        if (username != null) 'username': username,
+        if (email != null) 'email': email,
+        if (password != null) 'password': password,
+        if (role != null) 'role': role.value,
+        if (fullName != null) 'full_name': fullName,
+        if (serviceId != null) 'service_id': serviceId,
+      },
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('UpdateUser failed: ${response.error}');
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Supprime un utilisateur (admin uniquement).
+  Future<bool> deleteUser(int userId) async {
+    if (_token == null) return false;
+
+    final requestId = 'req-${_generateRequestId()}';
+    final request = Request(
+      requestId: requestId,
+      action: RequestAction.deleteUser,
+      token: _token,
+      payload: {'user_id': userId},
+    );
+
+    final response = await _tcpClient.sendRequest(request);
+
+    if (response.status != ResponseStatus.success) {
+      print('DeleteUser failed: ${response.error}');
+      return false;
+    }
+
+    return true;
+  }
+
   /// Génère un ID de requête aléatoire.
   String _generateRequestId() {
     final random = Random();
