@@ -8,3 +8,7 @@ environment:
 
 dev_dependencies:
   test: ^1.25.0
+dependencies:
+  noh_common:
+    path: ../common
+  postgres: ^3.4.0   # vérifier la dernière version sur pub.dev
